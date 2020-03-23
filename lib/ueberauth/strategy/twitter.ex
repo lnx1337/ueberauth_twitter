@@ -26,8 +26,9 @@ defmodule Ueberauth.Strategy.Twitter do
   Handles the callback from Twitter.
   """
   def handle_callback!(%Plug.Conn{params: %{"oauth_verifier" => oauth_verifier}} = conn) do
-    IO.inspect conn
-    token = get_session(conn, :twitter_token)
+    token = fetch_session(conn, [:twitter_token])
+    token = get_session(token, :twitter_token)
+
     case Twitter.OAuth.access_token(token, oauth_verifier) do
       {:ok, access_token} -> fetch_user(conn, access_token)
       {:error, error} -> set_errors!(conn, [error(error.code, error.reason)])
@@ -91,7 +92,8 @@ defmodule Ueberauth.Strategy.Twitter do
   Stores the raw information (including the token) obtained from the twitter callback.
   """
   def extra(conn) do
-    {token, _secret} = get_session(conn, :twitter_token)
+    token = fetch_session(conn, [:twitter_token])
+    {token, _secret} = get_session(token, :twitter_token)
 
     %Extra{
       raw_info: %{
@@ -109,10 +111,12 @@ defmodule Ueberauth.Strategy.Twitter do
         set_errors!(conn, [error("token", "unauthorized")])
 
       {:ok, %{status_code: status_code, body: body, headers: _}} when status_code in 200..399 ->
+
         conn
+        |> fetch_session
         |> put_private(:twitter_token, token)
         |> put_private(:twitter_user, body)
-
+      
       {:ok, %{status_code: _, body: body, headers: _}} ->
         error = List.first(body["errors"])
         set_errors!(conn, [error("token", error["message"])])

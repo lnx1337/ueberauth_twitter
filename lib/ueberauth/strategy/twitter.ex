@@ -17,6 +17,7 @@ defmodule Ueberauth.Strategy.Twitter do
     token = Twitter.OAuth.request_token!([], [redirect_uri: callback_url(conn)])
 
     conn
+    |> fetch_session
     |> put_session(:twitter_token, token)
     |> redirect!(Twitter.OAuth.authorize_url!(token))
   end
